@@ -1,0 +1,3 @@
+name: SunsetTestPlugin
+version: '${project.version}'
+main: me.andyreckt.sunset.example.Plugin
