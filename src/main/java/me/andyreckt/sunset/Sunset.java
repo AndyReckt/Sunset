@@ -5,7 +5,11 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import me.andyreckt.sunset.annotations.Command;
+import me.andyreckt.sunset.annotations.MainCommand;
 import me.andyreckt.sunset.annotations.Param;
+import me.andyreckt.sunset.annotations.SubCommand;
+import me.andyreckt.sunset.executor.SunsetCommand;
+import me.andyreckt.sunset.executor.SunsetSubCommand;
 import me.andyreckt.sunset.parameter.PData;
 import me.andyreckt.sunset.parameter.PType;
 import me.andyreckt.sunset.parameter.defaults.*;
@@ -31,14 +35,15 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
-
+@Getter
 public class Sunset {
+
 
     private final JavaPlugin plugin;
 
     private final HashMap<Class<?>, PType<?>> typesMap;
 
-    @Getter @Setter
+    @Setter
     private String permissionMessage = ChatColor.RED + "You are lacking the permission to execute this command.";
 
 
@@ -78,182 +83,64 @@ public class Sunset {
         }
     }
 
-    private void registerMethod(Method method, Object instance) {
 
-        Command commandAnnotation = method.getAnnotation(Command.class);
-        List<PData> parameterData = new ArrayList<>();
+    public void registerCommandWithSubCommands(Object object) {
+        if (object.getClass().getAnnotation(MainCommand.class) == null) return;
+        MainCommand mainCommandAnnotation = object.getClass().getAnnotation(MainCommand.class);
 
-        for (int parameterIndex = 1; parameterIndex < method.getParameterTypes().length; parameterIndex++) {
-            Param paramAnnotation = null;
+        List<Method> methodList = new ArrayList<>();
 
-            for (Annotation annotation : method.getParameterAnnotations()[parameterIndex]) {
-                if (annotation instanceof Param) {
-                    paramAnnotation = (Param) annotation;
-                    break;
-                }
-            }
+        for (Method method : object.getClass().getDeclaredMethods()) {
+            if (!method.isAnnotationPresent(SubCommand.class)) continue;
+            SubCommand commandAnnotation = method.getAnnotation(SubCommand.class);
 
-            if (paramAnnotation != null) {
-                Class<?> paramClass = method.getParameterTypes()[parameterIndex];
-                if (!this.typesMap.containsKey(paramClass)) {
-                    plugin.getLogger().severe("[Sunset] Class '" + paramClass.getSimpleName() + ".class' does not have an assigned type adapter (did you register it?)");
-                    return;
-                }
-                parameterData.add(new PData(paramAnnotation, paramClass));
-            } else {
-                plugin.getLogger().warning("[Sunset] Method '" + method.getName() + "' has a parameter without a @Param annotation.");
-                return;
-            }
-        }
+            List<PData> parameterData = new ArrayList<>();
 
-        String name = commandAnnotation.names()[0];
-        List<String> aliases = new ArrayList<>();
-        for (String alias : commandAnnotation.names()) {
-            if (alias.equalsIgnoreCase(name)) continue;
-            aliases.add(alias);
-        }
-        StringBuilder usage = new StringBuilder("/").append(name);
-        for (PData param : parameterData) {
-            usage.append(" ").append(param.isRequired() ? "<" : "[").append(param.getName()).append(param.isRequired() ? ">" : "]");
-        }
+            for (int parameterIndex = 1; parameterIndex < method.getParameterTypes().length; parameterIndex++) {
+                Param paramAnnotation = null;
 
-        if (!commandAnnotation.usage().equalsIgnoreCase("none")) usage = new StringBuilder(commandAnnotation.usage());
-
-        org.bukkit.command.Command command = new org.bukkit.command.Command(name, commandAnnotation.description(), ChatColor.RED + usage.toString(), aliases) {
-            @Override @SneakyThrows
-            public boolean execute(CommandSender commandSender, String alias, String[] args) {
-
-                List<Object> parameters = new ArrayList<>();
-
-                if (method.getParameterTypes()[0].equals(ConsoleCommandSender.class)) {
-                    if (!(commandSender instanceof ConsoleCommandSender)) {
-                        commandSender.sendMessage(ChatColor.RED + "This command can only be executed with the console.");
-                        return false;
-                    }
-                }
-
-                if (method.getParameterTypes()[0].equals(Player.class)) {
-                    if (!(commandSender instanceof Player)) {
-                        commandSender.sendMessage(ChatColor.RED + "This command can only be executed as a player.");
-                        return false;
-                    }
-
-                    parameters.add(commandSender);
-                } else parameters.add(commandSender);
-
-                if (!commandAnnotation.permission().equalsIgnoreCase("")) {
-                    if (commandAnnotation.permission().equalsIgnoreCase("op")) {
-                        if (commandSender instanceof Player && (!commandSender.hasPermission("op")) && (!commandSender.isOp())) {
-                            commandSender.sendMessage(permissionMessage);
-                            return false;
-                        }
-                    }
-                    if (!commandSender.hasPermission(commandAnnotation.permission())) {
-                        commandSender.sendMessage(permissionMessage);
-                        return false;
-                    }
-                }
-                if (method.getParameterTypes().length > 1) {
-                    for (int index = 1; index < method.getParameterTypes().length; index++) {
-
-                        Param param = null;
-
-                        for (Annotation annotation : method.getParameterAnnotations()[index]) {
-                            if (annotation instanceof Param) {
-                                param = (Param) annotation;
-                                break;
-                            }
-                        }
-
-                        if (param == null) {
-                            commandSender.sendMessage(ChatColor.RED + "Parameter annotation is null ?!");
-                            return false;
-                        }
-
-                        if (args.length == 0) {
-                            boolean bool = false;
-
-                            for (Annotation[] annotationArray : method.getParameterAnnotations()) {
-                                for (Annotation annotation : annotationArray) {
-                                    if (annotation instanceof Param) {
-                                        param = (Param) annotation;
-                                        if (param.baseValue().equalsIgnoreCase("")) bool = true;
-                                    }
-                                }
-                            }
-                            if (bool) {
-                                commandSender.sendMessage(getUsage());
-                                return false;
-                            }
-                        } else {
-                            if (args[index-1] == null) {
-                                if (param.baseValue().equalsIgnoreCase("")) return false;
-                                if (param.wildcard()) {
-                                    parameters.add(typesMap.get(method.getParameterTypes()[index]).transform(commandSender, param.baseValue()));
-                                    break;
-                                } else parameters.add(typesMap.get(method.getParameterTypes()[index]).transform(commandSender, param.baseValue()));
-                            } else if (param.wildcard()) {
-                                StringBuilder sb = new StringBuilder();
-
-                                for (int arg = index-1; arg < args.length; arg++) {
-                                    sb.append(args[arg]).append(" ");
-                                }
-
-                                parameters.add(typesMap.get(method.getParameterTypes()[index]).transform(commandSender, sb.toString()));
-                                break;
-                            } else parameters.add(typesMap.get(method.getParameterTypes()[index]).transform(commandSender, args[index-1]));
-                        }
-                    }
-                }
-
-
-                if (commandAnnotation.async()) ForkJoinPool.commonPool().execute(() -> {
-                    try {
-                        method.invoke(instance, parameters.toArray());
-                    } catch (IllegalAccessException | InvocationTargetException e) {
-                        e.printStackTrace();
-                    }
-                });
-                else method.invoke(instance, parameters.toArray());
-                return true;
-            }
-
-            @Override @SneakyThrows
-            public List<String> tabComplete(CommandSender sender, String alias, String[] args) throws IllegalArgumentException {
-                if (!(sender instanceof Player)) return (null);
-
-                Player player = (Player) sender;
-
-                Param param = null;
-                if (!((method.getParameterCount()-1) <= args.length)) return (new ArrayList<>());
-
-                int index = args.length - 1;
-                for (Annotation annotation : method.getParameterAnnotations()[args.length]) {
+                for (Annotation annotation : method.getParameterAnnotations()[parameterIndex]) {
                     if (annotation instanceof Param) {
-                        param = (Param) annotation;
+                        paramAnnotation = (Param) annotation;
                         break;
                     }
                 }
 
-                if (param == null) return (new ArrayList<>());
-                if (!Arrays.equals(param.tabCompleteFlags(), new String[]{""})) return (Arrays.asList(param.tabCompleteFlags()));
-                PType<?> pType = typesMap.get(method.getParameterTypes()[args.length]);
-
-                if (param.wildcard()) {
-
-                    StringBuilder sb = new StringBuilder();
-
-                    for (int arg = index; arg < args.length; arg++) {
-                        sb.append(args[arg]).append(" ");
+                if (paramAnnotation != null) {
+                    Class<?> paramClass = method.getParameterTypes()[parameterIndex];
+                    if (!this.typesMap.containsKey(paramClass)) {
+                        plugin.getLogger().severe("[Sunset] Class '" + paramClass.getSimpleName() + ".class' does not have an assigned type adapter (did you register it?)");
+                        return;
                     }
-
-                    return (pType.complete(player, sb.toString()));
-
-                } else return (pType.complete(player, args[index]));
+                    parameterData.add(new PData(paramAnnotation, paramClass));
+                } else {
+                    plugin.getLogger().warning("[Sunset] Method '" + method.getName() + "' has a parameter without a @Param annotation.");
+                    return;
+                }
             }
-        };
+
+            StringBuilder usage = new StringBuilder("/").append(mainCommandAnnotation.names()[0]).append(" ").append(commandAnnotation.names()[0]);
+            for (PData param : parameterData) {
+                usage.append(" ").append(param.isRequired() ? "<" : "[").append(param.getName()).append(param.isRequired() ? ">" : "]");
+            }
+
+            if (!commandAnnotation.usage().equalsIgnoreCase("none")) usage = new StringBuilder(commandAnnotation.usage());
+            methodList.add(method);
+        }
+
+        String mainUsage = "/" + mainCommandAnnotation.names()[0] + " " + mainCommandAnnotation.helpCommand();
+        if (!mainCommandAnnotation.usage().equalsIgnoreCase("none")) mainUsage = mainCommandAnnotation.usage();
+
+        List<String> aliases = new ArrayList<>();
+        for (String alias : mainCommandAnnotation.names()) {
+            if (alias.equalsIgnoreCase(mainCommandAnnotation.names()[0])) continue;
+            aliases.add(alias);
+        }
+
+        SunsetSubCommand command = new SunsetSubCommand(this, object, mainCommandAnnotation, mainUsage, aliases, methodList.toArray(new Method[0]));
         getCommandMap().register(plugin.getName(), command);
     }
+
 
 
     /**
@@ -266,18 +153,6 @@ public class Sunset {
         this.typesMap.put(to, from);
     }
 
-    private SimpleCommandMap getCommandMap() {
-        try {
-            SimplePluginManager pluginManager = (SimplePluginManager) Bukkit.getPluginManager();
-
-            Field field = pluginManager.getClass().getDeclaredField("commandMap");
-            field.setAccessible(true);
-
-            return (SimpleCommandMap) field.get(pluginManager);
-        } catch (Exception exception) {
-            throw new RuntimeException(exception);
-        }
-    }
 
     /**
      * Get a collection of all the Classes in a package
@@ -335,6 +210,74 @@ public class Sunset {
         }
 
         return (ImmutableSet.copyOf(classes));
+    }
+
+
+    /**
+     * Registers a method as a command.
+     *
+     * @param method The method to register
+     * @param instance The instance of the class to register the method to
+     */
+    private void registerMethod(Method method, Object instance) {
+
+        Command commandAnnotation = method.getAnnotation(Command.class);
+        List<PData> parameterData = new ArrayList<>();
+
+        for (int parameterIndex = 1; parameterIndex < method.getParameterTypes().length; parameterIndex++) {
+            Param paramAnnotation = null;
+
+            for (Annotation annotation : method.getParameterAnnotations()[parameterIndex]) {
+                if (annotation instanceof Param) {
+                    paramAnnotation = (Param) annotation;
+                    break;
+                }
+            }
+
+            if (paramAnnotation != null) {
+                Class<?> paramClass = method.getParameterTypes()[parameterIndex];
+                if (!this.typesMap.containsKey(paramClass)) {
+                    plugin.getLogger().severe("[Sunset] Class '" + paramClass.getSimpleName() + ".class' does not have an assigned type adapter (did you register it?)");
+                    return;
+                }
+                parameterData.add(new PData(paramAnnotation, paramClass));
+            } else {
+                plugin.getLogger().warning("[Sunset] Method '" + method.getName() + "' has a parameter without a @Param annotation.");
+                return;
+            }
+        }
+
+        String name = commandAnnotation.names()[0];
+        List<String> aliases = new ArrayList<>();
+        for (String alias : commandAnnotation.names()) {
+            if (alias.equalsIgnoreCase(name)) continue;
+            aliases.add(alias);
+        }
+        StringBuilder usage = new StringBuilder("/").append(name);
+        for (PData param : parameterData) {
+            usage.append(" ").append(param.isRequired() ? "<" : "[").append(param.getName()).append(param.isRequired() ? ">" : "]");
+        }
+
+        if (!commandAnnotation.usage().equalsIgnoreCase("none")) usage = new StringBuilder(commandAnnotation.usage());
+
+        SunsetCommand command = new SunsetCommand(this, method, instance, commandAnnotation, ChatColor.RED + usage.toString(), aliases);
+        getCommandMap().register(plugin.getName(), command);
+    }
+
+
+
+
+    private SimpleCommandMap getCommandMap() {
+        try {
+            SimplePluginManager pluginManager = (SimplePluginManager) Bukkit.getPluginManager();
+
+            Field field = pluginManager.getClass().getDeclaredField("commandMap");
+            field.setAccessible(true);
+
+            return (SimpleCommandMap) field.get(pluginManager);
+        } catch (Exception exception) {
+            throw new RuntimeException(exception);
+        }
     }
 
     private void registerDefaultTypes() {

@@ -6,7 +6,7 @@
 
     <groupId>me.andyreckt</groupId>
     <artifactId>Sunset</artifactId>
-    <version>1.0</version>
+    <version>2.0</version>
     <packaging>jar</packaging>
 
     <name>Sunset</name>
@@ -24,7 +24,10 @@
                 <version>3.8.1</version>
                 <configuration>
                     <source>${java.version}</source>
-                    <target>${java.version}</target>
+                    <target>1.8</target>
+                    <excludes>
+                        <exclude>**/me/andyreckt/sunset/example/*.java</exclude>
+                    </excludes>
                 </configuration>
             </plugin>
             <plugin>
@@ -64,7 +67,7 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>1.18.22</version>
+            <version>1.18.24</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>
