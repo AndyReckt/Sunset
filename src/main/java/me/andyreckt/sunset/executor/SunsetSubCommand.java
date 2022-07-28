@@ -137,7 +137,7 @@ public class SunsetSubCommand extends org.bukkit.command.Command {
                         return false;
                     }
                 } else {
-                    if (args[index-1] == null) {
+                    if (args[index-1] == null || args[index-1].equals("")) {
                         if (param.baseValue().equalsIgnoreCase("")) return false;
                         if (param.wildcard()) {
                             parameters.add(sunset.getTypesMap().get(method.getParameterTypes()[index]).transform(commandSender, param.baseValue()));

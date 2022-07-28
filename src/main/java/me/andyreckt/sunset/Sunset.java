@@ -265,8 +265,33 @@ public class Sunset {
     }
 
 
+    /**
+     * Registers all the commands in the package.
+     */
+    @SneakyThrows
+    public void registerCommandsInPackage(String packageName) {
+        Collection<Class<?>> classes = getClassesInPackage(plugin, packageName);
+        for (Class<?> clazz : classes) {
+            registerCommands(clazz.newInstance());
+        }
+    }
 
+    /**
+     * Registers all the commands with subcommands in the package.
+     */
+    @SneakyThrows
+    public void registerCommandsWithSubCommandsInPackage(String packageName) {
+        Collection<Class<?>> classes = getClassesInPackage(plugin, packageName);
+        for (Class<?> clazz : classes) {
+            registerCommandWithSubCommands(clazz.newInstance());
+        }
+    }
 
+    /**
+     * Get the CommandMap for the server.
+     *
+     * @return The CommandMap for the server.
+     */
     private SimpleCommandMap getCommandMap() {
         try {
             SimplePluginManager pluginManager = (SimplePluginManager) Bukkit.getPluginManager();
@@ -280,6 +305,9 @@ public class Sunset {
         }
     }
 
+    /**
+     * Registers the default parameter types.
+     */
     private void registerDefaultTypes() {
         registerType(new BooleanType(), boolean.class);
         registerType(new DoubleType(), double.class);
