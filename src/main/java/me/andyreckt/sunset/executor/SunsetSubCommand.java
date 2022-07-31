@@ -59,6 +59,7 @@ public class SunsetSubCommand extends org.bukkit.command.Command {
             return false;
         }
         SubCommand subCommand = method.getDeclaredAnnotation(SubCommand.class);
+        super.setUsage(subCommand.usage());
 
         List<Object> parameters = new ArrayList<>();
 
@@ -123,14 +124,16 @@ public class SunsetSubCommand extends org.bukkit.command.Command {
 
                 if (args.length == 0) {
                     boolean bool = false;
-
+                    int i = 0;
                     for (Annotation[] annotationArray : method.getParameterAnnotations()) {
                         for (Annotation annotation : annotationArray) {
                             if (annotation instanceof Param) {
                                 param = (Param) annotation;
                                 if (param.baseValue().equalsIgnoreCase("")) bool = true;
+                                else parameters.add(sunset.getTypesMap().get(method.getParameterTypes()[i]).transform(commandSender, param.baseValue()));
                             }
                         }
+                        i++;
                     }
                     if (bool) {
                         commandSender.sendMessage(getUsage());
@@ -139,10 +142,13 @@ public class SunsetSubCommand extends org.bukkit.command.Command {
                 } else {
                     if (args[index-1] == null || args[index-1].equals("")) {
                         if (param.baseValue().equalsIgnoreCase("")) return false;
+
                         if (param.wildcard()) {
-                            parameters.add(sunset.getTypesMap().get(method.getParameterTypes()[index]).transform(commandSender, param.baseValue()));
+                            parameters.add(sunset.getTypesMap().get(method.getParameterTypes()[index-1]).transform(commandSender, param.baseValue()));
                             break;
-                        } else parameters.add(sunset.getTypesMap().get(method.getParameterTypes()[index]).transform(commandSender, param.baseValue()));
+                        } else {
+                            parameters.add(sunset.getTypesMap().get(method.getParameterTypes()[index-1]).transform(commandSender, param.baseValue()));
+                        }
                     } else if (param.wildcard()) {
                         StringBuilder sb = new StringBuilder();
 
@@ -150,9 +156,9 @@ public class SunsetSubCommand extends org.bukkit.command.Command {
                             sb.append(args[arg]).append(" ");
                         }
 
-                        parameters.add(sunset.getTypesMap().get(method.getParameterTypes()[index]).transform(commandSender, sb.toString()));
+                        parameters.add(sunset.getTypesMap().get(method.getParameterTypes()[index-1]).transform(commandSender, sb.toString()));
                         break;
-                    } else parameters.add(sunset.getTypesMap().get(method.getParameterTypes()[index]).transform(commandSender, args[index-1]));
+                    } else parameters.add(sunset.getTypesMap().get(method.getParameterTypes()[index-1]).transform(commandSender, args[index-1]));
                 }
             }
         }
