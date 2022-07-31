@@ -156,9 +156,9 @@ public class SunsetSubCommand extends org.bukkit.command.Command {
                             sb.append(args[arg]).append(" ");
                         }
 
-                        parameters.add(sunset.getTypesMap().get(method.getParameterTypes()[index-1]).transform(commandSender, sb.toString()));
+                        parameters.add(sunset.getTypesMap().get(method.getParameterTypes()[index]).transform(commandSender, sb.toString()));
                         break;
-                    } else parameters.add(sunset.getTypesMap().get(method.getParameterTypes()[index-1]).transform(commandSender, args[index-1]));
+                    } else parameters.add(sunset.getTypesMap().get(method.getParameterTypes()[index]).transform(commandSender, args[index-1]));
                 }
             }
         }
