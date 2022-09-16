@@ -136,13 +136,15 @@ public class SunsetSubCommand extends org.bukkit.command.Command {
                         i++;
                     }
                     if (bool) {
-                        commandSender.sendMessage(getUsage());
+                        commandSender.sendMessage(ChatColor.RED + getUsage());
                         return false;
                     }
                 } else {
-                    if (args[index-1] == null || args[index-1].equals("")) {
-                        if (param.baseValue().equalsIgnoreCase("")) return false;
-
+                    if (args.length <= index-1 || args[index-1] == null || args[index-1].equals("")) {
+                        if (param.baseValue().equalsIgnoreCase("")) {
+                            commandSender.sendMessage(ChatColor.RED + getUsage());
+                            return false;
+                        }
                         if (param.wildcard()) {
                             parameters.add(sunset.getTypesMap().get(method.getParameterTypes()[index-1]).transform(commandSender, param.baseValue()));
                             break;
@@ -163,6 +165,11 @@ public class SunsetSubCommand extends org.bukkit.command.Command {
             }
         }
 
+        for (Object parameter : parameters) {
+            if (parameter == null) {
+                return false;
+            }
+        }
 
         if (subCommand.async()) {
             Method finalMethod = method;
