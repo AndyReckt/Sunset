@@ -146,10 +146,10 @@ public class SunsetSubCommand extends org.bukkit.command.Command {
                             return false;
                         }
                         if (param.wildcard()) {
-                            parameters.add(sunset.getTypesMap().get(method.getParameterTypes()[index-1]).transform(commandSender, param.baseValue()));
+                            parameters.add(sunset.getTypesMap().get(method.getParameterTypes()[index]).transform(commandSender, param.baseValue()));
                             break;
                         } else {
-                            parameters.add(sunset.getTypesMap().get(method.getParameterTypes()[index-1]).transform(commandSender, param.baseValue()));
+                            parameters.add(sunset.getTypesMap().get(method.getParameterTypes()[index]).transform(commandSender, param.baseValue()));
                         }
                     } else if (param.wildcard()) {
                         StringBuilder sb = new StringBuilder();

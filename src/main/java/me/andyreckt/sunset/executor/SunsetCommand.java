@@ -111,15 +111,15 @@ public class SunsetCommand extends org.bukkit.command.Command {
                         }
 
                         if (param.wildcard()) {
-                            parameters.add(sunset.getTypesMap().get(method.getParameterTypes()[index-1]).transform(commandSender, param.baseValue()));
+                            parameters.add(sunset.getTypesMap().get(method.getParameterTypes()[index]).transform(commandSender, param.baseValue()));
                             break;
                         } else {
-                            parameters.add(sunset.getTypesMap().get(method.getParameterTypes()[index-1]).transform(commandSender, param.baseValue()));
+                            parameters.add(sunset.getTypesMap().get(method.getParameterTypes()[index]).transform(commandSender, param.baseValue()));
                         }
                     } else if (param.wildcard()) {
                         StringBuilder sb = new StringBuilder();
 
-                        for (int arg = index; arg < args.length; arg++) {
+                        for (int arg = index-1; arg < args.length; arg++) {
                             sb.append(args[arg]).append(" ");
                         }
 
