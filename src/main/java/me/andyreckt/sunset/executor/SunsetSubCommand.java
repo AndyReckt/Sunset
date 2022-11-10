@@ -201,6 +201,8 @@ public class SunsetSubCommand extends org.bukkit.command.Command {
 
         Param param = null;
 
+
+
         ArrayList<String> abc = new ArrayList<>(Arrays.asList(strings));
         String commandName = strings[0];
         abc.remove(0);
@@ -218,8 +220,11 @@ public class SunsetSubCommand extends org.bukkit.command.Command {
 
         if (!((method.getParameterCount()-1) <= args.length)) return (new ArrayList<>());
 
-        int index = args.length - 2;
-        for (Annotation annotation : method.getParameterAnnotations()[args.length -1]) {
+        int index = args.length - 1;
+        if (args.length == 0 || args.length > (method.getParameterCount() - 1)) {
+            return (new ArrayList<>());
+        }
+        for (Annotation annotation : method.getParameters()[args.length].getAnnotations()) {
             if (annotation instanceof Param) {
                 param = (Param) annotation;
                 break;
@@ -228,7 +233,8 @@ public class SunsetSubCommand extends org.bukkit.command.Command {
 
         if (param == null) return (new ArrayList<>());
         if (!Arrays.equals(param.tabCompleteFlags(), new String[]{""})) return (Arrays.asList(param.tabCompleteFlags()));
-        PType<?> pType = sunset.getTypesMap().get(method.getParameterTypes()[args.length -1]);
+        PType<?> pType = sunset.getTypesMap().get(method.getParameterTypes()[args.length]);
+        if (pType == null) return (new ArrayList<>());
 
         if (param.wildcard()) {
 

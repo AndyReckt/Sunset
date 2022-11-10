@@ -9,7 +9,6 @@ import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.java.JavaPlugin;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
@@ -156,7 +155,10 @@ public class SunsetCommand extends org.bukkit.command.Command {
         if (!((method.getParameterCount()-1) <= args.length)) return (new ArrayList<>());
 
         int index = args.length - 1;
-        for (Annotation annotation : method.getParameterAnnotations()[args.length]) {
+        if (args.length == 0 || args.length > (method.getParameterCount() - 1)) {
+            return (new ArrayList<>());
+        }
+        for (Annotation annotation : method.getParameters()[args.length].getAnnotations()) {
             if (annotation instanceof Param) {
                 param = (Param) annotation;
                 break;
@@ -166,12 +168,13 @@ public class SunsetCommand extends org.bukkit.command.Command {
         if (param == null) return (new ArrayList<>());
         if (!Arrays.equals(param.tabCompleteFlags(), new String[]{""})) return (Arrays.asList(param.tabCompleteFlags()));
         PType<?> pType = sunset.getTypesMap().get(method.getParameterTypes()[args.length]);
+        if (pType == null) return (new ArrayList<>());
 
         if (param.wildcard()) {
 
             StringBuilder sb = new StringBuilder();
 
-            for (int arg = index; arg < args.length; arg++) {
+            for (int arg = index; arg < args.length -1; arg++) {
                 sb.append(args[arg]).append(" ");
             }
 
