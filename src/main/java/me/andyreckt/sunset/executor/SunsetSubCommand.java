@@ -2,12 +2,11 @@ package me.andyreckt.sunset.executor;
 
 import lombok.SneakyThrows;
 import me.andyreckt.sunset.Sunset;
-import me.andyreckt.sunset.annotations.Command;
 import me.andyreckt.sunset.annotations.MainCommand;
 import me.andyreckt.sunset.annotations.Param;
 import me.andyreckt.sunset.annotations.SubCommand;
 import me.andyreckt.sunset.parameter.PType;
-import org.bukkit.Bukkit;
+import org.apache.commons.lang3.StringUtils;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
@@ -194,7 +193,9 @@ public class SunsetSubCommand extends org.bukkit.command.Command {
         if (strings.length == 0 || strings[0] == null || strings[0].equals("")) {
             List<String> toReturn = new ArrayList<>();
             for (Method m : methods) {
-                toReturn.add(m.getDeclaredAnnotation(SubCommand.class).names()[0]);
+                if (StringUtils.startsWithIgnoreCase(strings[0], m.getDeclaredAnnotation(SubCommand.class).names()[0])) {
+                    toReturn.add(m.getDeclaredAnnotation(SubCommand.class).names()[0]);
+                }
             }
             return toReturn;
         }
