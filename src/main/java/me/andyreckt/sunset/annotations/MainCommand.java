@@ -10,11 +10,13 @@ import java.lang.annotation.Target;
 public @interface MainCommand {
     String[] names();
 
-    String helpCommand();
-
     String permission() default "";
 
     String description() default "";
 
     String usage() default "none";
+
+    String helpCommand() default "help";
+
+    boolean autoHelp() default true;
 }

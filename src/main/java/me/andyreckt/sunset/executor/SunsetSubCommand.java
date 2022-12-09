@@ -6,7 +6,7 @@ import me.andyreckt.sunset.annotations.MainCommand;
 import me.andyreckt.sunset.annotations.Param;
 import me.andyreckt.sunset.annotations.SubCommand;
 import me.andyreckt.sunset.parameter.PType;
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang.StringUtils;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
@@ -40,6 +40,36 @@ public class SunsetSubCommand extends org.bukkit.command.Command {
     public boolean execute(CommandSender commandSender, String s, String[] strings) {
         if (strings.length == 0 || strings[0] == null || strings[0].equals("")) {
             strings = new String[]{command.helpCommand()};
+        }
+
+        if (strings[0].equals(command.helpCommand()) && command.autoHelp()) {
+            if (!(commandSender instanceof Player)) {
+                commandSender.sendMessage(ChatColor.RED + "This command can only be executed as a player.");
+                return false;
+            }
+
+            Sunset.HelpBuilder builder = new Sunset.HelpBuilder(s, command.description());
+            for (Method method : methods) {
+                SubCommand subCommand = method.getAnnotation(SubCommand.class);
+                if (subCommand == null) continue;
+
+                String arg = subCommand.names()[0];
+                List<Param> params = new ArrayList<>();
+                for (Annotation[] annotations : method.getParameterAnnotations()) {
+                    for (Annotation annotation : annotations) {
+                        if (annotation instanceof Param) {
+                            Param param = (Param) annotation;
+                            params.add(param);
+                        }
+                    }
+                }
+                String description = subCommand.description();
+
+                if (!description.equalsIgnoreCase(""))
+                    builder.addSubCommand(arg, description, params);
+            }
+            builder.send((Player) commandSender);
+            return true;
         }
 
         ArrayList<String> abc = new ArrayList<>(Arrays.asList(strings));
@@ -106,7 +136,6 @@ public class SunsetSubCommand extends org.bukkit.command.Command {
 
         if (method.getParameterTypes().length > 1) {
             for (int index = 1; index < method.getParameterTypes().length; index++) {
-
                 Param param = null;
 
                 for (Annotation annotation : method.getParameterAnnotations()[index]) {
@@ -135,13 +164,31 @@ public class SunsetSubCommand extends org.bukkit.command.Command {
                         i++;
                     }
                     if (bool) {
-                        commandSender.sendMessage(ChatColor.RED + getUsage());
+                        StringBuilder usage = new StringBuilder();
+                        for (Annotation[] annotations : method.getParameterAnnotations()) {
+                            for (Annotation annotation : annotations) {
+                                if (annotation instanceof Param) {
+                                    param = (Param) annotation;
+                                    usage.append(!param.baseValue().equals("") ? '[' + param.name() + ']' : '<' + param.name() + '>').append(" ");
+                                }
+                            }
+                        }
+                        commandSender.sendMessage(ChatColor.RED + "Usage: /" + command.names()[0] + " " + subCommand.names()[0] + " " + usage.toString().trim());
                         return false;
                     }
                 } else {
                     if (args.length <= index-1 || args[index-1] == null || args[index-1].equals("")) {
                         if (param.baseValue().equalsIgnoreCase("")) {
-                            commandSender.sendMessage(ChatColor.RED + getUsage());
+                            StringBuilder usage = new StringBuilder();
+                            for (Annotation[] annotations : method.getParameterAnnotations()) {
+                                for (Annotation annotation : annotations) {
+                                    if (annotation instanceof Param) {
+                                        param = (Param) annotation;
+                                        usage.append(!param.baseValue().equals("") ? '[' + param.name() + ']' : '<' + param.name() + '>').append(" ");
+                                    }
+                                }
+                            }
+                            commandSender.sendMessage(ChatColor.RED + "Usage: /" + command.names()[0] + " " + subCommand.names()[0] + " " + usage.toString().trim());
                             return false;
                         }
                         if (param.wildcard()) {
@@ -193,15 +240,12 @@ public class SunsetSubCommand extends org.bukkit.command.Command {
         if (strings.length == 0 || strings[0] == null || strings[0].equals("")) {
             List<String> toReturn = new ArrayList<>();
             for (Method m : methods) {
-                if (StringUtils.startsWithIgnoreCase(strings[0], m.getDeclaredAnnotation(SubCommand.class).names()[0])) {
-                    toReturn.add(m.getDeclaredAnnotation(SubCommand.class).names()[0]);
-                }
+                toReturn.add(m.getDeclaredAnnotation(SubCommand.class).names()[0]);
             }
             return toReturn;
         }
 
         Param param = null;
-
 
 
         ArrayList<String> abc = new ArrayList<>(Arrays.asList(strings));
@@ -216,10 +260,18 @@ public class SunsetSubCommand extends org.bukkit.command.Command {
             }
         }
         if (method == null) {
-            return (new ArrayList<>());
+            List<String> toReturn = new ArrayList<>();
+            for (Method m : methods) {
+                for (String str : m.getDeclaredAnnotation(SubCommand.class).names()) {
+                    if (StringUtils.startsWithIgnoreCase(str, commandName)) {
+                        toReturn.add(str);
+                    }
+                }
+            }
+            return (toReturn);
         }
 
-        if (!((method.getParameterCount()-1) <= args.length)) return (new ArrayList<>());
+        // if (!((method.getParameterCount() - 1) <= args.length)) return (new ArrayList<>()); //TODO: SEE IF THIS IS NEEDED
 
         int index = args.length - 1;
         if (args.length == 0 || args.length > (method.getParameterCount() - 1)) {
@@ -233,7 +285,8 @@ public class SunsetSubCommand extends org.bukkit.command.Command {
         }
 
         if (param == null) return (new ArrayList<>());
-        if (!Arrays.equals(param.tabCompleteFlags(), new String[]{""})) return (Arrays.asList(param.tabCompleteFlags()));
+        if (!Arrays.equals(param.tabCompleteFlags(), new String[]{""}))
+            return (Arrays.asList(param.tabCompleteFlags()));
         PType<?> pType = sunset.getTypesMap().get(method.getParameterTypes()[args.length]);
         if (pType == null) return (new ArrayList<>());
 
@@ -241,12 +294,14 @@ public class SunsetSubCommand extends org.bukkit.command.Command {
 
             StringBuilder sb = new StringBuilder();
 
-            for (int arg = index; arg < args.length -1; arg++) {
+            for (int arg = index; arg < args.length - 1; arg++) {
                 sb.append(args[arg]).append(" ");
             }
 
             return (pType.complete(player, sb.toString()));
 
-        } else return (pType.complete(player, args[index]));
+        } else {
+            return (pType.complete(player, args[index]));
+        }
     }
 }

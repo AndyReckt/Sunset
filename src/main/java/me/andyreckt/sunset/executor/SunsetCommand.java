@@ -99,13 +99,31 @@ public class SunsetCommand extends org.bukkit.command.Command {
                         i++;
                     }
                     if (bool) {
-                        commandSender.sendMessage(ChatColor.RED + getUsage());
+                        StringBuilder usage = new StringBuilder();
+                        for (Annotation[] annotations : method.getParameterAnnotations()) {
+                            for (Annotation annotation : annotations) {
+                                if (annotation instanceof Param) {
+                                    param = (Param) annotation;
+                                    usage.append(!param.baseValue().equals("") ? '[' + param.name() + ']' : '<' + param.name() + '>').append(" ");
+                                }
+                            }
+                        }
+                        commandSender.sendMessage(ChatColor.RED + "Usage: /" + command.names()[0] + " " + usage.toString().trim());
                         return false;
                     }
                 } else {
                     if (args.length <= index-1 || args[index-1] == null || args[index-1].equals("")) {
                         if (param.baseValue().equalsIgnoreCase("")) {
-                            commandSender.sendMessage(ChatColor.RED + getUsage());
+                            StringBuilder usage = new StringBuilder();
+                            for (Annotation[] annotations : method.getParameterAnnotations()) {
+                                for (Annotation annotation : annotations) {
+                                    if (annotation instanceof Param) {
+                                        param = (Param) annotation;
+                                        usage.append(!param.baseValue().equals("") ? '[' + param.name() + ']' : '<' + param.name() + '>').append(" ");
+                                    }
+                                }
+                            }
+                            commandSender.sendMessage(ChatColor.RED + "Usage: /" + command.names()[0] + " " + usage.toString().trim());
                             return false;
                         }
 
@@ -146,13 +164,13 @@ public class SunsetCommand extends org.bukkit.command.Command {
     }
 
     @Override @SneakyThrows
-    public List<String> tabComplete(CommandSender sender, String alias, String[] args){
+    public List<String> tabComplete(CommandSender sender, String alias, String[] args) {
         if (!(sender instanceof Player)) return (null);
 
         Player player = (Player) sender;
 
         Param param = null;
-        if (!((method.getParameterCount()-1) <= args.length)) return (new ArrayList<>());
+        // if (!((method.getParameterCount() - 1) <= args.length)) return (new ArrayList<>()); //TODO: SEE IF THIS IS NEEDED
 
         int index = args.length - 1;
         if (args.length == 0 || args.length > (method.getParameterCount() - 1)) {
@@ -166,7 +184,8 @@ public class SunsetCommand extends org.bukkit.command.Command {
         }
 
         if (param == null) return (new ArrayList<>());
-        if (!Arrays.equals(param.tabCompleteFlags(), new String[]{""})) return (Arrays.asList(param.tabCompleteFlags()));
+        if (!Arrays.equals(param.tabCompleteFlags(), new String[]{""}))
+            return (Arrays.asList(param.tabCompleteFlags()));
         PType<?> pType = sunset.getTypesMap().get(method.getParameterTypes()[args.length]);
         if (pType == null) return (new ArrayList<>());
 
@@ -174,7 +193,7 @@ public class SunsetCommand extends org.bukkit.command.Command {
 
             StringBuilder sb = new StringBuilder();
 
-            for (int arg = index; arg < args.length -1; arg++) {
+            for (int arg = index; arg < args.length - 1; arg++) {
                 sb.append(args[arg]).append(" ");
             }
 

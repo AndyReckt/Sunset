@@ -13,6 +13,7 @@ import me.andyreckt.sunset.executor.SunsetSubCommand;
 import me.andyreckt.sunset.parameter.PData;
 import me.andyreckt.sunset.parameter.PType;
 import me.andyreckt.sunset.parameter.defaults.*;
+import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.OfflinePlayer;
@@ -318,5 +319,56 @@ public class Sunset {
         registerType(new PlayerType(), Player.class);
         registerType(new WorldType(), World.class);
     }
+
+    public static class HelpBuilder {
+
+        private static final char NICE_CHAR = '●';
+        private final List<TextComponent> components;
+        private final String commandName;
+
+        public HelpBuilder(String commandName, String description) {
+            this.components = new ArrayList<>();
+            this.commandName = commandName;
+
+            this.components.add(new TextComponent(translate(" ")));
+            this.components.add(new TextComponent(translate("  &6" + description)));
+            this.components.add(new TextComponent(translate("$undefined")));
+            this.components.add(new TextComponent(translate(" ")));
+        }
+
+        public HelpBuilder addSubCommand(String command, String description, Param... args) {
+            StringBuilder argsBuilder = new StringBuilder();
+            for (Param arg : args) {
+                if (arg.baseValue().equals("")) {
+                    argsBuilder.append(" &b<").append(arg.name()).append(">");
+                } else {
+                    argsBuilder.append(" &b[").append(arg.name()).append("]");
+                }
+            }
+            this.components.add(new TextComponent(translate("   &7" + NICE_CHAR + " &e/&6" + commandName + " &e" + command + argsBuilder + " &7» &f" + description)));
+            return this;
+        }
+
+        public HelpBuilder addSubCommand(String command, String description, List<Param> args) {
+            return this.addSubCommand(command, description, args.toArray(new Param[0]));
+        }
+
+        public List<TextComponent> getFinal() {
+            this.components.add(new TextComponent(translate(" ")));
+            this.components.set(2, new TextComponent(translate("  &eThere is &6" + (this.components.size() - 5) + " &esub-command(s) available.")));
+            return this.components;
+        }
+
+        public void send(Player player) {
+            for (TextComponent component : getFinal()) {
+                player.spigot().sendMessage(component);
+            }
+        }
+
+        private static String translate(String message) {
+            return ChatColor.translateAlternateColorCodes('&', message);
+        }
+    }
+
 
 }
